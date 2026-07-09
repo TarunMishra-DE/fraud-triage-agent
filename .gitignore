@@ -14,3 +14,5 @@ __pycache__/
 .streamlit/secrets.toml
 data/audit_log.db
 data/eval_results.json
+data/processed/cases.jsonl
+data/processed/history_lookup.json
