@@ -137,9 +137,19 @@ st.markdown("""
 
   /* Divider */
   hr { border: none; border-top: 1px solid #E2E8F0; margin: 16px 0; }
+            
 </style>
 """, unsafe_allow_html=True)
 
+# Hide the sticky duplicate tab header
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] ~ div [data-testid="stHeader"] {
+    display: none;
+}
+div[data-testid="stDecoration"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 DATA_DIR = Path("./data/processed")
