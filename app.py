@@ -23,11 +23,18 @@ st.set_page_config(
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  /* Global */
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
-  
+
+  /* Hide Streamlit chrome — header, toolbar, footer */
+  header[data-testid="stHeader"]     { display: none !important; }
+  div[data-testid="stToolbar"]       { display: none !important; }
+  div[data-testid="stDecoration"]    { display: none !important; }
+  footer                             { display: none !important; }
+  .stAppHeader                       { display: none !important; }
+  #MainMenu                          { display: none !important; }
+
   .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
-  
+
   /* Case card */
   .case-card {
     background: #F7F8FB; border: 1px solid #E2E8F0;
@@ -43,7 +50,7 @@ st.markdown("""
   }
   .case-meta { font-size: 13px; color: #64748B; margin-top: 4px; }
 
-  /* Signal row */
+  /* Signal grid */
   .signal-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 10px; margin: 16px 0;
@@ -120,7 +127,7 @@ st.markdown("""
     color: #0A1628; font-weight: 500;
   }
 
-  /* Sidebar */
+  /* Sidebar metrics */
   .sidebar-metric {
     text-align: center; padding: 12px;
     background: white; border: 1px solid #E2E8F0;
@@ -135,24 +142,9 @@ st.markdown("""
     font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.06em;
   }
 
-  /* Divider */
   hr { border: none; border-top: 1px solid #E2E8F0; margin: 16px 0; }
-            
-/* Hide sticky top navigation header */
-  header[data-testid="stHeader"] { display: none !important; }
-  div[data-testid="stToolbar"] { display: none !important; }
-  .stAppHeader { display: none !important; }
-            
-           
-</style>
-            <style>
-section[data-testid="stSidebar"] ~ div [data-testid="stHeader"] {
-    display: none;
-}
-div[data-testid="stDecoration"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -204,22 +196,14 @@ def conf_badge(conf):
     return f'<span class="badge badge-{conf}">{conf.upper()}</span>'
 
 def flag_badge(flag):
-    cls = {"aml_concern": "aml", "fraud": "fraud", "ambiguous": "ambig"}.get(flag, "ambig")
+    cls   = {"aml_concern": "aml", "fraud": "fraud", "ambiguous": "ambig"}.get(flag, "ambig")
     label = {"aml_concern": "AML CONCERN", "fraud": "FRAUD", "ambiguous": "AMBIGUOUS"}.get(flag, flag.upper())
     return f'<span class="badge badge-{cls}">{label}</span>'
-
-def signal_class(value_str):
-    v = str(value_str).lower()
-    if any(w in v for w in ["above", "high", "instant", "cross", "flag"]):
-        return "flag"
-    if any(w in v for w in ["moderate", "medium", "warn"]):
-        return "warn"
-    return "ok"
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🔍 Fraud Triage Agent")
+    st.markdown("### Fraud Triage Agent")
     st.markdown(
         "<div style='font-size:12px;color:#64748B;margin-bottom:16px'>"
         "N26-inspired · BaFin-regulated · EU AI Act compliant"
@@ -227,11 +211,9 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Stats from audit log
     audit = load_audit_log()
     total     = len(audit)
     escalated = sum(1 for r in audit if r[4] == 1)
-    decided   = sum(1 for r in audit if r[6] is not None)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -259,39 +241,26 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<div style='font-size:12px;color:#475569;line-height:1.6'>"
-        "⚖️ EU AI Act Annex III — high-risk classification<br>"
-        "👤 Article 14 — human oversight on every case<br>"
-        "📋 BaFin / MaRisk — full audit log maintained<br>"
-        "🔒 GDPR Art. 22 — no solely-automated decisions"
+        "<div style='font-size:12px;color:#475569;line-height:1.8'>"
+        "EU AI Act Annex III — high-risk<br>"
+        "Article 14 — human oversight on every case<br>"
+        "BaFin / MaRisk — full audit log<br>"
+        "GDPR Art. 22 — no auto-decisions"
         "</div>",
         unsafe_allow_html=True,
     )
 
     st.markdown("---")
     st.markdown(
-        "<div style='font-size:11px;color:#94A3B8;font-family:monospace;margin-bottom:8px'>"
-        "DATA TRANSPARENCY"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
         "<div style='font-size:11px;color:#94A3B8;line-height:1.6'>"
         "Public IEEE-CIS dataset (Kaggle) + synthetic SEPA rows. "
-        "No real customer data. Inspired by published N26 job postings "
-        "and BaFin regulatory filings."
+        "No real customer data."
         "</div>",
         unsafe_allow_html=True,
     )
 
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
-# Find this:
-tab_review, tab_queue, tab_audit = st.tabs([
-    "🔎 Case review", "📋 Case queue", "📁 Audit log"
-])
-
-# Replace with:
 tab_review, tab_queue, tab_audit = st.tabs([
     "Case review", "Case queue", "Audit log"
 ])
@@ -322,17 +291,14 @@ with tab_review:
         selected_id = st.selectbox(
             "Select case", case_ids,
             label_visibility="collapsed",
-            placeholder="Choose a case ID..."
         )
     with col_run:
-        run_btn = st.button("▶ Run agent", type="primary", use_container_width=True)
+        run_btn = st.button("Run agent", type="primary", use_container_width=True)
 
-    # Retrieve raw case for display
     selected_case = next((c for c in cases if c["case_id"] == selected_id), None)
 
     if selected_case:
-        # Case summary card (always shown)
-        amount    = selected_case.get("amount_eur", 0)
+        amount   = selected_case.get("amount_eur", 0)
         sepa_type = selected_case.get("sepa_type", "—")
         s_country = selected_case.get("sender_country", "?")
         r_country = selected_case.get("receiver_country", "?")
@@ -342,7 +308,6 @@ with tab_review:
         score     = selected_case.get("upstream_fraud_score", 0)
         velocity  = selected_case.get("txn_count_30d", 0)
         cross     = selected_case.get("is_cross_border", False)
-        aml       = selected_case.get("aml_signal", False)
         s_iban    = selected_case.get("sender_iban", "—")
         r_iban    = selected_case.get("receiver_iban", "—")
         r_bic     = selected_case.get("receiver_bic", "—")
@@ -359,7 +324,6 @@ with tab_review:
             unsafe_allow_html=True,
         )
 
-        # Signal grid
         vel_cls   = "flag" if velocity > 10 else "ok"
         score_cls = "flag" if score > 0.7 else ("warn" if score > 0.4 else "ok")
         sepa_cls  = "flag" if sepa_type == "SEPA_INSTANT" else "ok"
@@ -377,7 +341,7 @@ with tab_review:
               </div>
               <div class="signal-card">
                 <div class="signal-label">Velocity (30d)</div>
-                <div class="signal-value {vel_cls}">{velocity} txn {'⚠ above threshold' if velocity > 10 else '✓ normal'}</div>
+                <div class="signal-value {vel_cls}">{velocity} txn {'— above threshold' if velocity > 10 else '— normal'}</div>
               </div>
               <div class="signal-card">
                 <div class="signal-label">Geography</div>
@@ -401,7 +365,7 @@ with tab_review:
     if run_btn and selected_case:
         with st.spinner("Agent reasoning..."):
             result = run_case(selected_id)
-        st.session_state["last_result"] = result
+        st.session_state["last_result"]  = result
         st.session_state["last_case_id"] = selected_id
 
     if "last_result" in st.session_state and st.session_state.get("last_case_id") == selected_id:
@@ -416,13 +380,11 @@ with tab_review:
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("**Agent recommendation**")
 
-        # Badges row
         st.markdown(
             f"{rec_badge(rec)} &nbsp; {conf_badge(conf)} &nbsp; {flag_badge(flag)}",
             unsafe_allow_html=True,
         )
 
-        # Reasoning trace
         st.markdown(
             f"""<div class="reasoning-block">
               <div class="reasoning-label">Reasoning trace</div>
@@ -431,13 +393,12 @@ with tab_review:
             unsafe_allow_html=True,
         )
 
-        # HITL / AML notices
         if flag == "aml_concern":
             st.markdown(
                 """<div class="aml-notice">
-                  <strong>⚖️ AML concern flagged.</strong> This case routes to
+                  <strong>AML concern flagged.</strong> This case routes to
                   SAR filing (Verdachtsmeldung to the FIU) — not customer contact.
-                  Confidentiality obligation applies: the customer must not be informed.
+                  Confidentiality obligation applies.
                 </div>""",
                 unsafe_allow_html=True,
             )
@@ -445,36 +406,32 @@ with tab_review:
         if esc:
             st.markdown(
                 f"""<div class="hitl-notice">
-                  <strong>👤 Human review required.</strong> {esc_r}.
+                  <strong>Human review required.</strong> {esc_r}.
                   EU AI Act Article 14 — the investigator retains full authority.
                 </div>""",
                 unsafe_allow_html=True,
             )
 
-        # Decision buttons
         st.markdown("<br>**Your decision**", unsafe_allow_html=True)
         d_col1, d_col2, d_col3 = st.columns(3)
 
         with d_col1:
-            if st.button("✅ Agree with agent", use_container_width=True):
+            if st.button("Agree with agent", use_container_width=True):
                 log_investigator_decision(selected_id, f"agreed:{rec}")
                 st.success(f"Logged: agreed with {rec.upper()}")
 
         with d_col2:
-            if st.button("✏️ Override", use_container_width=True):
+            if st.button("Override", use_container_width=True):
                 st.session_state["show_override"] = True
 
         with d_col3:
-            if st.button("🔺 Escalate to senior", use_container_width=True):
+            if st.button("Escalate to senior", use_container_width=True):
                 log_investigator_decision(selected_id, "escalated:senior_review")
                 st.warning("Logged: escalated to senior investigator")
 
         if st.session_state.get("show_override"):
             with st.form("override_form"):
-                override_dec = st.selectbox(
-                    "Your decision",
-                    ["approve", "decline", "escalate"],
-                )
+                override_dec = st.selectbox("Your decision", ["approve", "decline", "escalate"])
                 override_reason = st.text_area(
                     "Override reason (required for audit log)",
                     placeholder="Explain why you are overriding the agent recommendation...",
@@ -485,9 +442,7 @@ with tab_review:
                     if not override_reason.strip():
                         st.error("Override reason is required for BaFin audit compliance.")
                     else:
-                        log_investigator_decision(
-                            selected_id, f"override:{override_dec}", override_reason
-                        )
+                        log_investigator_decision(selected_id, f"override:{override_dec}", override_reason)
                         st.session_state["show_override"] = False
                         st.success(f"Logged: override → {override_dec.upper()}")
                         st.rerun()
@@ -500,20 +455,31 @@ with tab_queue:
     st.markdown("#### Open case queue")
     st.markdown(
         "<div style='font-size:13px;color:#64748B;margin-bottom:20px'>"
-        "All available cases. Click a case ID to open it in the review panel."
+        "All available cases with key risk signals at a glance."
         "</div>",
         unsafe_allow_html=True,
     )
 
     cases = load_cases()
+    col_headers = st.columns([2, 1, 2, 1, 2])
+    headers = ["Case ID", "Amount", "Route", "Score", "Flags"]
+    for col, h in zip(col_headers, headers):
+        col.markdown(
+            f"<div style='font-family:monospace;font-size:10px;color:#94A3B8;"
+            f"text-transform:uppercase;letter-spacing:0.08em'>{h}</div>",
+            unsafe_allow_html=True,
+        )
+    st.markdown("<hr style='margin:6px 0'>", unsafe_allow_html=True)
+
     for c in cases[:30]:
         amount  = c.get("amount_eur", 0)
         country = f"{c.get('sender_country','?')} → {c.get('receiver_country','?')}"
         sepa    = c.get("sepa_type", "—")
         score   = c.get("upstream_fraud_score", 0)
-        aml     = "🟣 AML" if c.get("aml_signal") else ""
-        inst    = "⚡ Instant" if sepa == "SEPA_INSTANT" else ""
-        flags   = " &nbsp; ".join(filter(None, [aml, inst]))
+        flags   = " ".join(filter(None, [
+            "AML" if c.get("aml_signal") else "",
+            "Instant" if sepa == "SEPA_INSTANT" else "",
+        ]))
 
         col_id, col_amt, col_geo, col_score, col_flags = st.columns([2, 1, 2, 1, 2])
         with col_id:
@@ -532,9 +498,9 @@ with tab_queue:
                 unsafe_allow_html=True,
             )
         with col_flags:
-            st.markdown(f"<span style='font-size:12px'>{flags}</span>", unsafe_allow_html=True)
+            st.markdown(f"<span style='font-size:12px;color:#64748B'>{flags}</span>", unsafe_allow_html=True)
 
-        st.markdown("<hr style='margin:6px 0'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -564,9 +530,7 @@ with tab_audit:
                 if ov_reason:
                     inv_label += f" — {ov_reason}"
 
-            esc_label = ""
-            if esc_req:
-                esc_label = f"&nbsp;·&nbsp; ⚠ Escalated"
+            esc_label = "&nbsp;·&nbsp; Escalated" if esc_req else ""
 
             st.markdown(
                 f"""<div class="audit-row">
@@ -590,7 +554,7 @@ with tab_audit:
             ])
             writer.writerows(audit_rows)
             st.download_button(
-                "⬇ Download CSV",
+                "Download CSV",
                 output.getvalue(),
                 file_name=f"fraud_triage_audit_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
