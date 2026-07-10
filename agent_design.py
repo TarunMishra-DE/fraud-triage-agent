@@ -59,23 +59,27 @@ def retrieve(state: AgentState) -> AgentState:
 
     # Load the case
     case = None
-    with open(DATA_DIR / "cases_sample.jsonl") as f:
+    sample_path = DATA_DIR / "cases_sample.jsonl"
+    if not sample_path.exists():
+        sample_path = DATA_DIR / "eval_set.jsonl"
+    
+    with open(sample_path) as f:
         for line in f:
             row = json.loads(line)
             if row["case_id"] == case_id:
                 case = row
                 break
     if not case:
-        # Fallback: load first case (for testing)
-        with open(DATA_DIR / "cases_sample.jsonl") as f:
+        with open(sample_path) as f:
             case = json.loads(f.readline())
 
-    # Load transaction history
-    with open(DATA_DIR / "history_lookup.json") as f:
-        lookup = json.load(f)
-
-    # Use sender country as a proxy customer key (demo only)
-    history = lookup.get(str(case.get("sender_country", "")), [])[:10]
+    # Load transaction history — gracefully handle missing file
+    history = []
+    history_path = DATA_DIR / "history_lookup.json"
+    if history_path.exists():
+        with open(history_path) as f:
+            lookup = json.load(f)
+        history = lookup.get(str(case.get("sender_country", "")), [])[:10]
 
     return {**state, "case": case, "transaction_history": history}
 

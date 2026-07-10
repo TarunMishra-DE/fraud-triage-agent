@@ -272,8 +272,14 @@ with st.sidebar:
 
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
+# Find this:
 tab_review, tab_queue, tab_audit = st.tabs([
     "🔎 Case review", "📋 Case queue", "📁 Audit log"
+])
+
+# Replace with:
+tab_review, tab_queue, tab_audit = st.tabs([
+    "Case review", "Case queue", "Audit log"
 ])
 
 
