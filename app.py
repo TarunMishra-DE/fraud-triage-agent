@@ -143,23 +143,17 @@ st.markdown("""
   div[data-testid="stToolbar"] { display: none !important; }
   .stAppHeader { display: none !important; }
             
-/* Hide duplicate Streamlit tab bar */
-  .stTabs [data-baseweb="tab-list"] {
-    display: none;
-  }
-            
+           
 </style>
-""", unsafe_allow_html=True)
-
-# Hide the sticky duplicate tab header
-st.markdown("""
-<style>
+            <style>
 section[data-testid="stSidebar"] ~ div [data-testid="stHeader"] {
     display: none;
 }
 div[data-testid="stDecoration"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
+
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 DATA_DIR = Path("./data/processed")
