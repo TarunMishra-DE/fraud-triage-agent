@@ -138,6 +138,11 @@ st.markdown("""
   /* Divider */
   hr { border: none; border-top: 1px solid #E2E8F0; margin: 16px 0; }
             
+/* Hide sticky top navigation header */
+  header[data-testid="stHeader"] { display: none !important; }
+  div[data-testid="stToolbar"] { display: none !important; }
+  .stAppHeader { display: none !important; }
+            
 </style>
 """, unsafe_allow_html=True)
 
