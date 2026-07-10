@@ -143,6 +143,11 @@ st.markdown("""
   div[data-testid="stToolbar"] { display: none !important; }
   .stAppHeader { display: none !important; }
             
+/* Hide duplicate Streamlit tab bar */
+  .stTabs [data-baseweb="tab-list"] {
+    display: none;
+  }
+            
 </style>
 """, unsafe_allow_html=True)
 
